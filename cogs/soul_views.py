@@ -1,8 +1,8 @@
-"""UI-компоненты системы Soul-Coins.
+"""UI Soul-Coins.
 
-Кнопки «➕/➖ Баллы» под таблицей — persistent (переживают перезапуск).
+Кнопки «➕/➖ Баллы» под таблицей — persistent (переживают рестарт).
 Нажатие открывает эфемерный Select с игроками (с пагинацией при >24),
-выбор — модальное окно с суммой и причиной.
+дальше — модалка с суммой и причиной.
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ class SoulPanelView(View):
         await self._open_member_select(interaction, delta=-1)
 
     async def _open_member_select(self, interaction: discord.Interaction, delta: int) -> None:
-        # Проверка прав при нажатии, а не только при отрисовке.
+        # Права проверяем при нажатии, а не при отрисовке.
         if not is_moderator(interaction.user):
             await interaction.response.send_message(
                 embed=embeds.error_embed(NO_PERMISSION), ephemeral=True
@@ -72,7 +72,7 @@ class SoulPanelView(View):
 
 
 class MemberSelectView(View):
-    """Select с отслеживаемыми игроками и пагинацией (при >24 участников)."""
+    """Select с игроками и пагинацией (при >24)."""
 
     def __init__(self, service: "SoulCoinService", delta: int, members: list, page: int = 0) -> None:
         super().__init__(timeout=180)
@@ -129,7 +129,7 @@ class MemberSelectView(View):
 
 
 class PointsModal(Modal):
-    """Форма: сумма баллов + причина."""
+    """Форма: сумма + причина."""
 
     def __init__(self, service: "SoulCoinService", delta: int, user_id: int) -> None:
         title = "➕ Начисление баллов" if delta > 0 else "➖ Списание баллов"

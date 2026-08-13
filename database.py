@@ -1,9 +1,8 @@
-"""Слой работы с SQLite.
+"""Слой SQLite.
 
-Операции выполняются в отдельном потоке через asyncio.to_thread,
-чтобы не блокировать event loop. Запись защищена блокировкой,
-а переходы статусов — атомарными UPDATE с проверкой текущего статуса
-(защита от одновременной обработки одной заявки).
+Операции гоним в отдельном потоке (asyncio.to_thread), чтобы не блокировать
+event loop. Запись защищена блокировкой, переходы статусов — атомарными
+UPDATE с проверкой текущего статуса (чтобы заявку не обработали дважды).
 """
 from __future__ import annotations
 
@@ -89,7 +88,7 @@ CREATE TABLE IF NOT EXISTS verifications (
 CREATE INDEX IF NOT EXISTS idx_verifications_user ON verifications (user_id);
 """
 
-# Сколько резервных копий БД хранить (data/backups)
+# Сколько бэкапов БД храним (data/backups)
 BACKUP_KEEP = 7
 
 
@@ -104,19 +103,19 @@ class Database:
     def connect(self) -> None:
         """Создаёт файл БД и таблицы, если их ещё нет."""
         DATA_DIR.mkdir(parents=True, exist_ok=True)
-        # timeout: при конкурентной записи ждём до 10 c вместо «database is locked».
+        # ждём до 10 c при конкурентной записи, а не падаем с «database is locked»
         self._conn = sqlite3.connect(self.path, check_same_thread=False, timeout=10.0)
         self._conn.row_factory = sqlite3.Row
         with self._lock:
             self._conn.execute("PRAGMA journal_mode=WAL")
-            # synchronous=FULL: каждая транзакция ждёт записи на диск — надёжность важнее скорости.
+            # synchronous=FULL: каждая транзакция ждёт записи на диск — надёжнее
             self._conn.execute("PRAGMA synchronous=FULL")
             self._conn.execute("PRAGMA busy_timeout=10000")
             self._conn.executescript(_SCHEMA)
             self._conn.commit()
 
     def close(self) -> None:
-        """Закрывает соединение, предварительно сводя WAL в основную базу."""
+        """Закрываем соединение, сводя WAL в основную базу."""
         with self._lock:
             if self._conn is not None:
                 try:
@@ -129,9 +128,9 @@ class Database:
     # ---------- транзакции и резервные копии ----------
 
     def _tx(self, fn: Callable[[sqlite3.Connection], Any]) -> Any:
-        """Атомарная транзакция: BEGIN IMMEDIATE … COMMIT/ROLLBACK.
+        """Атомарная транзакция: BEGIN IMMEDIATE → COMMIT/ROLLBACK.
 
-        Вызывается ТОЛЬКО изнутри _run (блокировка уже удержана).
+        Вызывается ТОЛЬКО из _run (блокировка уже удержана).
         """
         self._conn.execute("BEGIN IMMEDIATE")
         try:
@@ -144,11 +143,11 @@ class Database:
             return result
 
     async def transaction(self, fn: Callable[[sqlite3.Connection], Any]) -> Any:
-        """Публичная async-обёртка для атомарных многокомандных операций."""
+        """Асинхронная обёртка для атомарных многокомандных операций."""
         return await self._run(self._tx, fn)
 
     def create_backup(self) -> Optional[Path]:
-        """Консистентная копия БД (backup API корректно работает с WAL)."""
+        """Копия БД (backup API дружит с WAL)."""
         backups_dir = DATA_DIR / "backups"
         try:
             backups_dir.mkdir(parents=True, exist_ok=True)
@@ -337,7 +336,7 @@ class Database:
     # ---------- Soul-Coins ----------
 
     async def get_soul_balance(self, user_id: int, month_key: str) -> int:
-        """Баланс игрока за конкретный месяц (0, если записи нет)."""
+        """Баланс игрока за месяц (0, если записи нет)."""
 
         def _get() -> int:
             row = self._fetch_one(
@@ -368,7 +367,7 @@ class Database:
         moderator_id: int,
         created_at: str,
     ) -> None:
-        """Атомарно: обновляет баланс и пишет запись в лог."""
+        """Баланс + запись в лог — одной транзакцией."""
         def _tx(conn):
             conn.execute(
                 "INSERT INTO soul_coins (user_id, guild_id, month_key, balance, updated_at) "
@@ -387,11 +386,11 @@ class Database:
         await self._run(self._tx, _tx)
 
     async def reset_soul_balances(self, new_month: str, guild_id: int = 0) -> None:
-        """Начало нового месяца: обнуляет балансы и атомарно фиксирует месяц.
+        """Новый месяц: обнуляем балансы и фиксируем месяц — атомарно.
 
-        Оба изменения в одной транзакции, чтобы при сбое не получить
-        обнулённые балансы с «не закрытым» месяцем (иначе повторный запуск
-        проверил бы всех как невыполнивших норму).
+        Оба апдейта в одной транзакции, иначе при сбое получим обнулённые
+        балансы с «открытым» месяцем, и повторный запуск посчитает всех
+        не выполнившими норму.
         """
         def _tx(conn):
             conn.execute(
@@ -436,7 +435,7 @@ class Database:
         await self._run(_insert)
 
     async def get_verification(self, user_id: int) -> Optional[dict]:
-        """Последняя верификация пользователя (или None)."""
+        """Последняя верификация юзера (или None)."""
         return await self._run(
             self._fetch_one,
             "SELECT * FROM verifications WHERE user_id = ? ORDER BY id DESC LIMIT 1",

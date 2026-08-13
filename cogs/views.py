@@ -1,8 +1,7 @@
-"""Discord UI-компоненты: кнопки и модальные окна.
+"""UI-компоненты: кнопки и модалки.
 
-Кнопки одобрения/отклонения создаются с уникальным custom_id
-на основе id заявки и регистрируются как persistent-views
-(bot.add_view), поэтому переживают перезапуск бота.
+Кнопки одобрения/отклонения — persistent (custom_id с id заявки,
+регистрируются через bot.add_view), поэтому переживают рестарт бота.
 """
 from __future__ import annotations
 
@@ -28,7 +27,7 @@ ADMIN_CLEANUP_ID = "afk_admin_cleanup"
 
 
 class AfkFormModal(Modal):
-    """Форма создания заявки: дата окончания + причина."""
+    """Форма заявки: дата окончания + причина."""
 
     def __init__(self, service: "AfkService") -> None:
         super().__init__(title="Заявка на АФК", custom_id="afk_form_modal")

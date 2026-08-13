@@ -1,7 +1,7 @@
 """Валидация ввода и работа с датами.
 
-Даты хранятся в БД в UTC (ISO-8601), пользователю показываются
-в часовом поясе сервера (config.TIMEZONE).
+В БД даты в UTC (ISO-8601), юзеру показываем в поясе сервера
+(config.TIMEZONE).
 """
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def parse_iso(value: str) -> datetime:
 
 
 def parse_datetime(value: str) -> datetime:
-    """Разбирает строку 'DD.MM.YYYY HH:MM' как локальное время сервера."""
+    """Разбирает 'DD.MM.YYYY HH:MM' как локальное время сервера."""
     text = value.strip()
     try:
         naive = datetime.strptime(text, DATETIME_FORMAT)
@@ -49,7 +49,7 @@ def parse_datetime(value: str) -> datetime:
 
 
 def validate_afk_duration(local_dt: datetime) -> None:
-    """Проверяет, что срок АФК корректен (не в прошлом, не слишком короткий/длинный)."""
+    """Проверяем срок АФК: не в прошлом, не слишком короткий/длинный."""
     local_now = now_utc().astimezone(config.TIMEZONE)
     if local_dt <= local_now:
         raise ValidationError("❌ Нельзя создать АФК до времени, которое уже прошло.")
@@ -69,12 +69,12 @@ def discord_timestamp(dt: datetime, style: str = "F") -> str:
 
 
 def display_datetime(dt: datetime) -> str:
-    """Локальное время сервера + Discord timestamp (локальное время пользователя)."""
+    """Локальное время сервера + Discord timestamp (в поясе юзера)."""
     return f"{format_local(dt)}\n({discord_timestamp(dt, 'F')})"
 
 
 def month_key(dt: datetime | None = None) -> str:
-    """Ключ месяца 'YYYY-MM' в часовом поясе сервера."""
+    """Ключ месяца 'YYYY-MM' в поясе сервера."""
     dt = dt or now_utc()
     return dt.astimezone(config.TIMEZONE).strftime("%Y-%m")
 
@@ -90,7 +90,7 @@ def month_label(month_key: str) -> str:
 
 
 def days_to_end_of_month(dt: datetime | None = None) -> int:
-    """Сколько дней осталось до конца текущего месяца (в поясе сервера)."""
+    """Сколько дней осталось до конца месяца (в поясе сервера)."""
     local = (dt or now_utc()).astimezone(config.TIMEZONE)
     year, month = local.year, local.month
     if month == 12:

@@ -1,4 +1,4 @@
-"""Фоновые задачи: завершение АФК, месяц Soul-Coins, резервные копии БД."""
+"""Фоновые задачи: завершение АФК, месяц Soul-Coins, бэкапы БД."""
 from __future__ import annotations
 
 import asyncio
@@ -81,15 +81,14 @@ class Scheduler:
                 await self.service.expire_afk(afk["id"])
 
     async def _maybe_backup(self) -> None:
-        """Раз в 24 часа — резервная копия БД (защита от порчи файла)."""
+        """Раз в 24 часа бэкапим БД (защита от порчи файла)."""
         now = time.monotonic()
         if now - self._last_backup >= BACKUP_INTERVAL_SECONDS:
             await db.backup_now()
             self._last_backup = now
 
     async def _refresh_tables(self) -> None:
-        """Каждую минуту пересобираем таблицы: вступление/выход игроков,
-        смена никнеймов, изменения балансов."""
+        """Каждую минуту пересобираем таблицы: заходы/выходы, смена ников, балансы."""
         if self.service is not None:
             await self.service.update_status_table()
         if self.soul_service is not None:

@@ -1,9 +1,9 @@
-"""Бизнес-логика системы Soul-Coins.
+"""Бизнес-логика Soul-Coins.
 
 Таблица баллов в чате «Таблица баллов», начисления — кнопками модераторов
 (+/− с выбором игрока и причиной), логи — в админ-чат «лог-баллов».
-В конце каждого месяца бот проверяет норму: тем, кто её не выполнил,
-снимает все снимаемые роли и выдаёт единственную роль «сокращён».
+В конце каждого месяца бот проверяет норму: кто не выполнил — снимает
+все снимаемые роли и выдаёт единственную роль «сокращён».
 """
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ class SoulCoinService(ChannelMixin):
         return excluded
 
     def is_excluded(self, member: discord.Member) -> bool:
-        """Боты и участники с ролями Leader/Admin не отслеживаются."""
+        """Боты и Leader/Admin не отслеживаются."""
         if member.bot:
             return True
         return bool({r.id for r in member.roles} & self._excluded_role_ids())
@@ -59,8 +59,8 @@ class SoulCoinService(ChannelMixin):
     async def build_rows(self) -> list[tuple[str, int, bool]]:
         """(ник, баланс, под_сокращением) для всех отслеживаемых, отсортировано.
 
-        Балансы читаются одним запросом, чтобы не делать запрос на каждого
-        игрока — таблица пересобирается каждую минуту.
+Балансы тянем одним запросом, а не на каждого игрока — таблица
+пересобирается каждую минуту.
         """
         month = self.current_month()
         balances = {
@@ -80,9 +80,9 @@ class SoulCoinService(ChannelMixin):
         return SoulPanelView(self)
 
     async def update_table(self) -> None:
-        """Пересобирает таблицу и правит существующее сообщение (или создаёт новое)."""
+        """Пересобираем таблицу и правим сообщение (или создаём новое)."""
         if not config.SOUL_COIN_TABLE_CHANNEL_ID:
-            return  # не настроено — молча пропускаем (обновляется раз в минуту)
+            return  # не настроено — молча пропускаем
         channel = await self.get_channel(config.SOUL_COIN_TABLE_CHANNEL_ID)
         if channel is None:
             logger.warning("Канал таблицы баллов (SOUL_COIN_TABLE_CHANNEL_ID) не найден")
@@ -117,7 +117,7 @@ class SoulCoinService(ChannelMixin):
     # ---------- начисление / списание ----------
 
     async def apply_points(self, interaction, user_id: int, delta: int, reason: str) -> None:
-        """Модератор начисляет/списывает баллы. Отвечает в interaction."""
+        """Модер начисляет/списывает баллы. Отвечает в interaction."""
         embed = None
         try:
             require_moderator(interaction.user)
@@ -167,7 +167,7 @@ class SoulCoinService(ChannelMixin):
             moderator_id=moderator.id,
             created_at=created_at,
         )
-        # подтверждение для модератора
+        # подтверждение модеру
         sign = "+" if delta >= 0 else ""
         confirm = embeds.simple_embed(
             "✅ Баллы начислены" if delta > 0 else "➖ Баллы списаны",
@@ -200,14 +200,14 @@ class SoulCoinService(ChannelMixin):
     # ---------- итоги месяца ----------
 
     async def finalize_month(self) -> bool:
-        """Проверяет смену месяца и проводит сокращение. Идемпотентна.
+        """Проверяет смену месяца и проводит сокращение. Идемпотентно.
 
-        Возвращает True, если был закрыт какой-то месяц.
+        Возвращает True, если какой-то месяц закрыт.
         """
         stored = await db.get_setting("soul_month_key")
         current = self.current_month()
         if stored is None:
-            # первый запуск — просто фиксируем текущий месяц
+            # первый запуск — просто запоминаем текущий месяц
             await db.set_setting("soul_month_key", current)
             return False
         if stored == current:
@@ -227,7 +227,7 @@ class SoulCoinService(ChannelMixin):
                 await self._apply_reduction(member)
                 under_list.append((member.id, balance))
             elif reduced_role is not None and reduced_role in member.roles:
-                # норму выполнил — убираем маркер «сокращён», если был
+                # норму выполнил — снимаем маркер «сокращён», если висел
                 try:
                     await member.remove_roles(reduced_role, reason="Норма Soul-Coins выполнена")
                     restored += 1
@@ -240,7 +240,7 @@ class SoulCoinService(ChannelMixin):
                 validators.month_label(stored), under_list, config.SOUL_COIN_NORM
             ),
         )
-        # Сброс на новый месяц — атомарно с фиксацией месяца (см. database.reset_soul_balances).
+        # Сброс на новый месяц атомарно с фиксацией месяца (см. database.reset_soul_balances).
         await db.reset_soul_balances(current, guild_id=guild.id)
         await self.update_table()
         logger.info(
@@ -250,13 +250,13 @@ class SoulCoinService(ChannelMixin):
         return True
 
     async def _apply_reduction(self, member: discord.Member) -> None:
-        """Снимает с игрока все снимаемые роли и выдаёт роль «сокращён»."""
+        """Снимаем с игрока все снимаемые роли и выдаём «сокращён»."""
         to_remove = []
         bot_top = member.guild.me.top_role
         for role in list(member.roles):
             if role.is_default() or role.is_managed():
                 continue
-            if role >= bot_top:  # роль выше/на уровне роли бота — не может снять
+            if role >= bot_top:  # выше/на уровне роли бота — бот снять не сможет
                 continue
             to_remove.append(role)
         if to_remove:
@@ -274,7 +274,7 @@ class SoulCoinService(ChannelMixin):
     # ---------- предупреждения ----------
 
     async def maybe_warn(self) -> None:
-        """Раз в день, в последние SOUL_COIN_WARNING_DAYS дней месяца — напоминание."""
+        """Раз в день, в последние N дней месяца — напоминание о норме."""
         days_left = validators.days_to_end_of_month()
         if days_left > config.SOUL_COIN_WARNING_DAYS:
             return
@@ -314,8 +314,8 @@ class SoulCoinService(ChannelMixin):
     # ---------- запуск ----------
 
     async def on_startup(self) -> None:
-        """После перезапуска: закрыть месяц при необходимости, обновить таблицу, вернуть кнопки."""
+        """После рестарта: закрыть месяц при необходимости, обновить таблицу, вернуть кнопки."""
         await self.finalize_month()
         await self.update_table()
-        # persistent-view кнопок таблицы — работает после перезапуска
+        # persistent-кнопки таблицы переживают рестарт
         self.bot.add_view(self._panel_view())

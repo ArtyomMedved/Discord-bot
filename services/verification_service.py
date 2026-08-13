@@ -1,10 +1,10 @@
-"""Бизнес-логика верификации новых игроков.
+"""Верификация новичков.
 
-Новичок нажимает кнопку «Верифицироваться» на закреплённом сообщении,
-заполняет анкету (статик, имя в игре, имя в жизни, занятие). После отправки:
-- выдается роль верификации (VERIFY_ROLE_ID);
-- устанавливается никнейм «{VERIFY_NICK_PREFIX}. Имя в игре (Имя в жизни)»;
-- анкета сохраняется в БД и пишется лог в админ-чат.
+Новичок жмёт «Верифицироваться» на закреплённом сообщении и заполняет
+анкету (статик, имя в игре, имя в жизни, занятие). После отправки:
+- выдаём роль (VERIFY_ROLE_ID);
+- ставим ник «{VERIFY_NICK_PREFIX}. Имя в игре (Имя в жизни)»;
+- анкета в БД + лог в админ-чат.
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ GENERIC_ERROR = (
     "Попробуйте ещё раз или обратитесь к администрации."
 )
 
-# Лимит никнейма в Discord
+# Лимит ника в Discord
 NICK_MAX = 32
 
 
@@ -40,7 +40,7 @@ class VerificationService(ChannelMixin):
         return VerificationPanelView(self)
 
     async def ensure_panel_message(self) -> None:
-        """Постит и закрепляет панель верификации (или правит существующую)."""
+        """Постим и закрепляем панель верификации (или правим существующую)."""
         channel = await self.get_channel(config.VERIFY_CHANNEL_ID)
         if channel is None:
             logger.warning("Канал верификации (VERIFY_CHANNEL_ID) не найден")
@@ -117,9 +117,29 @@ class VerificationService(ChannelMixin):
             return
 
         nickname = self._build_nickname(in_game, real)
+        # Важно: роль бота должна быть ВЫШЕ топ-роли игрока, иначе даже
+        # с правом «Управлять никнеймами» смена ника вернёт 403.
+        if member.top_role >= guild.me.top_role:
+            logger.warning(
+                "Смена ника заблокирована иерархией ролей: топ-роль игрока %s "
+                "(%s, поз. %s) >= топ-роль бота (%s, поз. %s). "
+                "Поднимите роль бота в «Настройках сервера → Роли» выше ролей игроков.",
+                member.id,
+                member.top_role.name,
+                member.top_role.position,
+                guild.me.top_role.name,
+                guild.me.top_role.position,
+            )
         try:
             await member.edit(nick=nickname, reason="Верификация нового игрока")
-        except (discord.Forbidden, discord.HTTPException):
+        except discord.Forbidden as exc:
+            logger.warning(
+                "Нет прав на смену ника %s (403 %s). Проверьте роль бота: "
+                "право «Управлять никнеймами» + позиция роли выше ролей игроков.",
+                member.id,
+                getattr(exc, "text", "") or exc.status,
+            )
+        except discord.HTTPException:
             logger.warning("Не удалось изменить никнейм пользователю %s", member.id)
 
         try:
@@ -160,6 +180,6 @@ class VerificationService(ChannelMixin):
     # ---------- запуск ----------
 
     async def on_startup(self) -> None:
-        """Создать/обновить панель и вернуть persistent-кнопку после перезапуска."""
+        """Создать/обновить панель и вернуть persistent-кнопку после рестарта."""
         await self.ensure_panel_message()
         self.bot.add_view(self._panel_view())

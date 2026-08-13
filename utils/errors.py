@@ -1,8 +1,8 @@
-"""Пользовательские исключения с готовыми сообщениями для Discord."""
+"""Наши исключения с готовыми сообщениями для Discord."""
 
 
 class AfkError(Exception):
-    """Базовая ошибка системы АФК. message показывается пользователю."""
+    """Базовая ошибка. message показываем юзеру."""
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
@@ -10,15 +10,15 @@ class AfkError(Exception):
 
 
 class PermissionDeniedError(AfkError):
-    """Недостаточно прав."""
+    """Нет прав."""
 
 
 class ValidationError(AfkError):
-    """Неверный ввод пользователя."""
+    """Кривой ввод юзера."""
 
 
 class AlreadyActiveError(AfkError):
-    """У пользователя уже есть активная заявка."""
+    """У юзера уже есть активная заявка."""
 
 
 class RequestNotFoundError(AfkError):
@@ -26,4 +26,4 @@ class RequestNotFoundError(AfkError):
 
 
 class AlreadyProcessedError(AfkError):
-    """Заявка уже была обработана ранее (защита от двойной обработки)."""
+    """Заявку уже обработали (защита от двойной обработки)."""

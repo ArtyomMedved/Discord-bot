@@ -1,4 +1,4 @@
-"""Построение Embed-сообщений бота: единый стиль, emoji, цвета."""
+"""Все embed-сообщения бота: единый стиль, emoji, цвета."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -90,7 +90,7 @@ def _time_value(end_time: str) -> str:
 
 
 def request_embed(afk: dict, guild=None) -> Embed:
-    """Embed заявки: на рассмотрении / одобрена / отклонена / завершена / отменена."""
+    """Embed заявки: любой статус."""
     status = afk["status"]
     embed = Embed(title=TITLES.get(status, TITLES[STATUS_PENDING]), color=color_for(status))
     embed.add_field(name="👤 Игрок", value=member_mention(afk["user_id"]), inline=True)
@@ -107,7 +107,7 @@ def request_embed(afk: dict, guild=None) -> Embed:
 
 
 def user_confirmation_embed(afk: dict) -> Embed:
-    """Ephemeral-подтверждение для игрока после создания заявки."""
+    """Эфемерное подтверждение игроку после создания заявки."""
     embed = Embed(title="✅ Заявка на АФК создана.", color=COLOR_PENDING)
     embed.add_field(name="До", value=_time_value(afk["end_time"]), inline=False)
     embed.add_field(name="Причина", value=truncate(afk.get("reason"), 900), inline=False)
@@ -236,7 +236,7 @@ def remove_success_embed(afk: dict) -> Embed:
 
 
 def user_notification_embed(afk: dict) -> Embed:
-    """DM-уведомление игроку в зависимости от статуса."""
+    """DM игроку в зависимости от статуса."""
     status = afk["status"]
     if status == STATUS_APPROVED:
         embed = Embed(title="🟢 Ваш АФК одобрен", color=COLOR_APPROVED)

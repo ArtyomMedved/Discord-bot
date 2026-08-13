@@ -1,7 +1,5 @@
-"""Точка входа Discord-бота для системы АФК.
-
-Запуск:
-    python bot.py
+"""
+Запуск: python bot.py
 """
 from __future__ import annotations
 
@@ -33,7 +31,7 @@ logger = logging.getLogger("afk_bot")
 
 class AfkBot(commands.Bot):
     def __init__(self) -> None:
-        # Включаем только нужные intents. members — privileged (нужно в Developer Portal).
+        # members-интент privileged — включи его в Developer Portal, иначе не заработает.
         intents = discord.Intents.default()
         intents.members = True
         super().__init__(command_prefix=commands.when_mentioned, intents=intents)
@@ -84,8 +82,8 @@ class AfkBot(commands.Bot):
                 await self.tree.sync()
                 logger.info("Команды синхронизированы глобально")
             else:
-                # copy_global_to — иначе sync(guild) отправит пустой список
-                # и удалит все guild-команды (команды добавляются глобально).
+                # copy_global_to обязателен: иначе sync(guild) отошлёт пустой список
+                # и снесит все guild-команды (команды глобальные).
                 self.tree.copy_global_to(guild=guild)
                 await self.tree.sync(guild=guild)
                 logger.info("Команды синхронизированы на сервер %s", guild.id)
@@ -99,7 +97,7 @@ class AfkBot(commands.Bot):
         logger.info("Инициализация завершена. Бот готов.")
 
     async def close(self) -> None:
-        """Корректное завершение: останавливаем задачи, сохраняем данные."""
+        """Штатное завершение: глушим задачи и сохраняем данные."""
         self.scheduler.stop()
         await super().close()
         await db.backup_now()
@@ -118,7 +116,7 @@ def main() -> None:
     try:
         bot.run(config.DISCORD_TOKEN)
     finally:
-        # Страховка: соединение закрывается в любом случае (WAL сводится в основной файл).
+        # Страховка: закрываем соединение в любом случае (WAL сведётся в файл).
         db.close()
 
 

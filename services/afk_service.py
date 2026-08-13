@@ -1,8 +1,7 @@
-"""Бизнес-логика системы АФК.
+"""Бизнес-логика АФК.
 
-Сервис не знает про конкретные кнопки и модалки — он принимает
-interaction и совершает все операции: работа с БД, выдача ролей,
-обновление сообщений, уведомления и логи.
+Сервис ничего не знает про кнопки и модалки — получает interaction и делает
+всю работу: БД, роли, сообщения, уведомления, логи.
 """
 from __future__ import annotations
 
@@ -98,7 +97,7 @@ class AfkService(ChannelMixin):
     # ---------- сообщения ----------
 
     async def edit_afk_message(self, afk: dict, embed) -> None:
-        """Обновляет исходное сообщение заявки (если оно ещё существует)."""
+        """Правим исходное сообщение заявки (если оно ещё живо)."""
         if not afk.get("message_id") or not afk.get("channel_id"):
             return
         channel = await self.get_channel(afk["channel_id"])
@@ -113,7 +112,7 @@ class AfkService(ChannelMixin):
             logger.exception("Не удалось отредактировать сообщение заявки #%s", afk["id"])
 
     async def notify_user(self, afk: dict) -> None:
-        """Отправляет игроку DM. Ошибки DM не считаем критическими."""
+        """Шлём игроку DM. Ошибки DM не критичны."""
         user = self.bot.get_user(afk["user_id"])
         if user is None:
             try:
@@ -194,7 +193,7 @@ class AfkService(ChannelMixin):
             logger.exception("Не удалось создать панель")
 
     async def restore_views(self) -> None:
-        """Перерегистрирует persistent-views для заявок со статусом PENDING."""
+        """Перерегистрируем persistent-views для заявок в PENDING."""
         from cogs.views import AfkActionView
 
         pending = await db.list_afks(status=STATUS_PENDING)
@@ -206,7 +205,7 @@ class AfkService(ChannelMixin):
         logger.info("Восстановлено views для %d заявок", restored)
 
     async def sync_roles_and_recover(self) -> None:
-        """После перезапуска: выдать роли, завершить уже истёкшие АФК, обновить таблицу."""
+        """После рестарта: выдаём роли, завершаем истёкшие АФК, обновляем таблицу."""
         approved = await db.list_approved_afks()
         now = validators.now_utc()
         for afk in approved:
@@ -284,7 +283,7 @@ class AfkService(ChannelMixin):
         try:
             require_moderator(interaction.user)
         except AfkError as exc:
-            # Ошибка прав — до defer, отвечаем напрямую.
+            # Ошибка прав — отвечаем напрямую, до defer
             await self._respond_error(interaction, exc.message, deferred=False)
             return
         try:
@@ -336,7 +335,7 @@ class AfkService(ChannelMixin):
         try:
             require_moderator(interaction.user)
         except AfkError as exc:
-            # Ошибка прав — до defer, отвечаем напрямую.
+            # Ошибка прав — отвечаем напрямую, до defer
             await self._respond_error(interaction, exc.message, deferred=False)
             return
         try:
@@ -472,7 +471,7 @@ class AfkService(ChannelMixin):
         await self.log_event("expiration", afk)
 
     async def handle_member_remove(self, member) -> None:
-        """Пользователь покинул/был удалён с сервера — закрываем его АФК."""
+        """Юзер ушёл или его выгнали — закрываем его АФК."""
         afk = await db.get_active_afk_for_user(member.id)
         if afk is None:
             return

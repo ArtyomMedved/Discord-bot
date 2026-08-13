@@ -6,9 +6,9 @@ from utils.errors import PermissionDeniedError
 
 
 def is_moderator(member) -> bool:
-    """True, если у участника есть хотя бы одна разрешённая роль.
+    """True, если есть хоть одна разрешённая роль.
 
-    Всегда пропускаем участников с правами администратора сервера.
+    Админов сервера пропускаем всегда.
     """
     if member is None:
         return False

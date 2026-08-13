@@ -1,7 +1,4 @@
-"""Конфигурация бота: все настройки читаются из .env.
-
-Ничего критичного не хардкодим — только значения по умолчанию.
-"""
+"""Конфиг бота — всё из .env, ничего не хардкодим, только дефолты."""
 from __future__ import annotations
 
 import os
@@ -48,11 +45,11 @@ MODERATOR_ROLE_ID: int = _int("MODERATOR_ROLE_ID")
 # === Soul-Coins ===
 SOUL_COIN_TABLE_CHANNEL_ID: int = _int("SOUL_COIN_TABLE_CHANNEL_ID")
 SOUL_COIN_LOG_CHANNEL_ID: int = _int("SOUL_COIN_LOG_CHANNEL_ID")
-# Роль Leader — участники с ней (и с ADMIN_ROLE_ID) не попадают в таблицу
+# Leader (как и Admin) в таблицу не попадает
 LEADER_ROLE_ID: int = _int("LEADER_ROLE_ID")
 # Минимальная норма в месяц (по умолчанию 60)
 SOUL_COIN_NORM: int = _int("SOUL_COIN_NORM", 60)
-# Единственная роль, выдаваемая при ежемесячном сокращении
+# Единственная роль, которую выдаём при ежемесячном сокращении
 SOUL_COIN_REDUCED_ROLE_ID: int = _int("SOUL_COIN_REDUCED_ROLE_ID")
 # За сколько дней до конца месяца слать предупреждения о невыполненной норме
 SOUL_COIN_WARNING_DAYS: int = _int("SOUL_COIN_WARNING_DAYS", 7)
@@ -60,16 +57,16 @@ SOUL_COIN_WARNING_DAYS: int = _int("SOUL_COIN_WARNING_DAYS", 7)
 # === Верификация ===
 VERIFY_CHANNEL_ID: int = _int("VERIFY_CHANNEL_ID")
 VERIFY_ROLE_ID: int = _int("VERIFY_ROLE_ID")
-# Канал для лога новых верификаций (🔒-админ-чат)
+# Лог новых верификаций (🔒-админ-чат)
 VERIFY_LOG_CHANNEL_ID: int = _int("VERIFY_LOG_CHANNEL_ID")
-# Префикс в никнейме новичка: "Verf. Angel (Артём)"
+# Префикс ника новичка: "Verf. Angel (Артём)"
 VERIFY_NICK_PREFIX: str = os.getenv("VERIFY_NICK_PREFIX", "Verf")
 
 # === Время ===
 TIMEZONE_NAME: str = os.getenv("TIMEZONE", "Europe/Berlin")
 try:
     TIMEZONE: ZoneInfo = ZoneInfo(TIMEZONE_NAME)
-except Exception:  # некорректная зона — откат на UTC
+except Exception:  # битая зона — откат на UTC
     TIMEZONE = ZoneInfo("UTC")
 
 MAX_AFK_DAYS: int = _int("MAX_AFK_DAYS", 30)
